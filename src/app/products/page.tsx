@@ -19,12 +19,16 @@ interface Produto {
   name: string;
   price: number;
   amount: number;
+  brand: string;
+  category: string;
 }
 
 interface ProdutoFormInputs {
   name: string;
   price: number;
   amount: number;
+  brand: string;
+  category: string;
 }
 
 export default function Products() {
@@ -105,7 +109,9 @@ export default function Products() {
     setValue("name", produto.name);
     setValue("price", produto.price);
     setValue("amount", produto.amount);
-    setIsModalOpen(true); // Open the modal when editing a product
+    setValue("brand", produto.brand);
+    setValue("category", produto.category);
+    setIsModalOpen(true);
   };
 
   const filteredProducts = products.filter((produto) =>
@@ -148,8 +154,7 @@ export default function Products() {
               className="border p-4 mb-2 flex justify-between items-center"
             >
               <span>
-                {produto.name} - R${produto.price.toFixed(2)} - Quantidade:{" "}
-                {produto.amount}
+                {produto.name} - Marca: {produto.brand} - Categoria: {produto.category} - R${produto.price.toFixed(2)} - Quantidade: {produto.amount}
               </span>
               <div className="flex items-center space-x-2">
                 <button
@@ -247,29 +252,68 @@ export default function Products() {
                   )}
                 </div>
 
-                <div className="flex space-x-2">
+                <div className="mb-4">
+                  <label className="block mb-2">Marca</label>
+                  <input
+                    type="text"
+                    placeholder="Marca do Produto"
+                    {...register("brand", {
+                      required: "Marca do produto é obrigatória",
+                      minLength: {
+                        value: 2,
+                        message: "Marca deve ter no mínimo 2 caracteres",
+                      },
+                    })}
+                    className={`border p-2 w-full ${
+                      errors.brand ? "border-red-500" : ""
+                    }`}
+                  />
+                  {errors.brand && (
+                    <p className="text-red-500 mt-1">{errors.brand.message}</p>
+                  )}
+                </div>
+
+                <div className="mb-4">
+                  <label className="block mb-2">Categoria</label>
+                  <input
+                    type="text"
+                    placeholder="Categoria do Produto"
+                    {...register("category", {
+                      required: "Categoria do produto é obrigatória",
+                      minLength: {
+                        value: 2,
+                        message: "Categoria deve ter no mínimo 2 caracteres",
+                      },
+                    })}
+                    className={`border p-2 w-full ${
+                      errors.category ? "border-red-500" : ""
+                    }`}
+                  />
+                  {errors.category && (
+                    <p className="text-red-500 mt-1">{errors.category.message}</p>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(false)}
+                    className="mr-4 bg-gray-500 text-white p-2"
+                  >
+                    Cancelar
+                  </button>
                   <button
                     type="submit"
-                    className="bg-green-500 text-white p-2 flex items-center justify-center"
+                    className="bg-blue-500 text-white p-2"
+                    disabled={isLoading}
                   >
                     {isLoading ? (
                       <ArrowPathIcon className="h-5 w-5 animate-spin" />
                     ) : editingProductId ? (
-                      "Atualizar Produto"
+                      "Salvar"
                     ) : (
-                      "Adicionar Produto"
+                      "Adicionar"
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsModalOpen(false);
-                      setEditingProductId(null);
-                      reset();
-                    }}
-                    className="bg-gray-500 text-white p-2"
-                  >
-                    Cancelar
                   </button>
                 </div>
               </form>

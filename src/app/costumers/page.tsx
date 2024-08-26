@@ -13,18 +13,21 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "react-toastify";
 import { LayoutWrapper } from "../components/LayoutWrapper";
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
+import { useRouter } from "next/navigation"; // Use this for client-side navigation
 
 interface Customer {
   id: string;
   name: string;
   email: string;
   phone: string;
+  endereco: string;
 }
 
 interface CustomerFormInputs {
   name: string;
   email: string;
   phone: string;
+  endereco: string;
 }
 
 export default function Customers() {
@@ -33,6 +36,7 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState({ addUpdate: false, delete: "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const router = useRouter(); // Ensure this is inside a client-side component
 
   const {
     register,
@@ -60,18 +64,16 @@ export default function Customers() {
     setLoading({ ...loading, addUpdate: true });
     try {
       if (selectedCustomer) {
-        // Update existing customer
         const customerRef = doc(db, "customers", selectedCustomer.id);
         await updateDoc(customerRef, data as Record<string, any>);
         toast.success("Cliente atualizado com sucesso!");
         setSelectedCustomer(null);
       } else {
-        // Add new customer
         await addDoc(collection(db, "customers"), data as Record<string, any>);
         toast.success("Cliente adicionado com sucesso!");
       }
 
-      fetchCustomers(); // Refresh the customer list
+      fetchCustomers();
       reset();
       setIsModalOpen(false);
     } catch (error) {
@@ -86,7 +88,8 @@ export default function Customers() {
     setValue("name", customer.name);
     setValue("email", customer.email);
     setValue("phone", customer.phone);
-    setIsModalOpen(true); // Open the modal when editing a customer
+    setValue("endereco", customer.endereco);
+    setIsModalOpen(true);
   };
 
   const cancelUpdate = () => {
@@ -101,7 +104,7 @@ export default function Customers() {
       const customerRef = doc(db, "customers", id);
       await deleteDoc(customerRef);
       toast.success("Cliente excluído com sucesso!");
-      fetchCustomers(); // Refresh the customer list
+      fetchCustomers();
     } catch (error) {
       toast.error("Erro ao excluir cliente");
     } finally {
@@ -112,7 +115,8 @@ export default function Customers() {
   const filteredCustomers = customers.filter((customer) =>
     customer.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
     customer.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    customer.phone.toLowerCase().includes(searchTerm.toLowerCase())
+    customer.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    customer.endereco.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
@@ -120,18 +124,16 @@ export default function Customers() {
       <div className="p-6">
         <h1 className="text-2xl mb-4">Gerenciar Clientes</h1>
 
-        {/* Search Filter */}
         <div className="mb-6">
           <input
             type="text"
-            placeholder="Buscar Cliente por Nome, Email ou Telefone"
+            placeholder="Buscar Cliente por Nome, Email, Telefone ou Endereço"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="border p-2 w-full"
           />
         </div>
 
-        {/* Button to open modal for adding a new customer */}
         <button
           onClick={() => {
             setIsModalOpen(true);
@@ -143,7 +145,6 @@ export default function Customers() {
           Adicionar Cliente
         </button>
 
-        {/* List of customers */}
         <ul>
           {filteredCustomers.map((customer) => (
             <li
@@ -151,9 +152,9 @@ export default function Customers() {
               className="border p-4 mb-2 flex justify-between items-center"
             >
               <span>
-                {customer.name} - Email: {customer.email} - Telefone: {customer.phone}
+                {customer.name} - Email: {customer.email} - Telefone: {customer.phone} - Endereço: {customer.endereco}
               </span>
-              <div>
+              <div className="flex items-center">
                 <button
                   onClick={() => startUpdateCustomer(customer)}
                   disabled={loading.addUpdate || loading.delete === customer.id}
@@ -168,7 +169,7 @@ export default function Customers() {
                 <button
                   onClick={() => deleteCustomer(customer.id)}
                   disabled={loading.delete === customer.id}
-                  className="bg-red-500 text-white p-2"
+                  className="bg-red-500 text-white p-2 mr-2"
                 >
                   {loading.delete === customer.id ? (
                     <ArrowPathIcon className="h-5 w-5 animate-spin" />
@@ -176,12 +177,21 @@ export default function Customers() {
                     "Excluir"
                   )}
                 </button>
+                <button
+                  onClick={() => {
+                    if (typeof window !== "undefined") {
+                      router.push(`/purchases?customerId=${customer.id}`);
+                    }
+                  }}
+                  className="bg-blue-500 text-white p-2"
+                >
+                  Ver compras
+                </button>
               </div>
             </li>
           ))}
         </ul>
 
-        {/* Modal for Add/Edit Customer */}
         {isModalOpen && (
           <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
             <div className="bg-white p-6 rounded shadow-lg w-96">
@@ -252,29 +262,47 @@ export default function Customers() {
                   )}
                 </div>
 
-                <div className="flex space-x-2">
+                <div className="mb-4">
+                  <label className="block mb-2">Endereço</label>
+                  <input
+                    type="text"
+                    placeholder="Endereço do Cliente"
+                    {...register("endereco", {
+                      required: "Endereço do cliente é obrigatório",
+                      minLength: {
+                        value: 5,
+                        message: "Endereço deve ter no mínimo 5 caracteres",
+                      },
+                    })}
+                    className={`border p-2 w-full ${
+                      errors.endereco ? "border-red-500" : ""
+                    }`}
+                  />
+                  {errors.endereco && (
+                    <p className="text-red-500 mt-1">{errors.endereco.message}</p>
+                  )}
+                </div>
+
+                <div className="flex justify-end">
+                  <button
+                    type="button"
+                    onClick={cancelUpdate}
+                    className="bg-gray-500 text-white p-2 mr-2"
+                  >
+                    Cancelar
+                  </button>
                   <button
                     type="submit"
                     disabled={loading.addUpdate}
-                    className={`${
-                      selectedCustomer ? "bg-yellow-500" : "bg-green-500"
-                    } text-white p-2 flex items-center justify-center`}
+                    className="bg-green-500 text-white p-2"
                   >
                     {loading.addUpdate ? (
                       <ArrowPathIcon className="h-5 w-5 animate-spin" />
                     ) : selectedCustomer ? (
-                      "Atualizar Cliente"
+                      "Atualizar"
                     ) : (
-                      "Adicionar Cliente"
+                      "Adicionar"
                     )}
-                  </button>
-                  <button
-                    type="button"
-                    onClick={cancelUpdate}
-                    disabled={loading.addUpdate}
-                    className="bg-gray-500 text-white p-2"
-                  >
-                    Cancelar
                   </button>
                 </div>
               </form>

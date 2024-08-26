@@ -26,6 +26,7 @@ interface Venda {
 interface Produto {
   id: string;
   name: any;
+  price: number; // Added price to calculate the total amount
 }
 
 interface Customer {
@@ -174,6 +175,11 @@ export default function Vendas() {
     return produto ? produto.name : "Produto desconhecido";
   };
 
+  const getProdutoPreco = (productId: string) => {
+    const produto = produtos.find((p) => p.id === productId);
+    return produto ? produto.price : 0;
+  };
+
   const getCustomerNome = (customerId: string) => {
     const customer = customers.find((c) => c.id === customerId);
     return customer ? customer.name : "Cliente desconhecido";
@@ -182,6 +188,12 @@ export default function Vendas() {
   const formatDate = (timestamp: Timestamp) => {
     const date = timestamp.toDate();
     return date.toLocaleDateString();
+  };
+
+  // Calculate total amount spent for each sale
+  const calculateTotalAmount = (productId: string, amount: number) => {
+    const price = getProdutoPreco(productId);
+    return (price * amount).toFixed(2);
   };
 
   return (
@@ -193,7 +205,9 @@ export default function Vendas() {
           onClick={() => {
             setIsModalOpen(true);
             setSelectedVenda(null);
-            reset();
+            reset({
+              date: new Date().toISOString().split("T")[0], // Set default date to today
+            });
           }}
           className="bg-green-500 text-white p-2 mb-6"
         >
@@ -211,7 +225,8 @@ export default function Vendas() {
               >
                 <span>
                   {getProdutoNome(venda.productId)} - Quantidade: {venda.amount}{" "}
-                  - Data: {formatDate(venda.date)} - Cliente: {getCustomerNome(venda.customerId)}
+                  - Data: {formatDate(venda.date)} - Cliente: {getCustomerNome(venda.customerId)}{" "}
+                  - Total: R${calculateTotalAmount(venda.productId, venda.amount)}
                 </span>
                 <div className="flex items-center space-x-2">
                   <button
