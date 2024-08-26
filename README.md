@@ -1,3 +1,5 @@
+This is a simple store app, you can manage the sales of your products, the only thing you'll need to run is a Firebase connection. Inside lib folder you will find the Firebase configuration settings, all you have to do is create a database on Firebase and then replace .env with your Firebase private keys.
+
 This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
 
 ## Getting Started
