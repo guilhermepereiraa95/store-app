@@ -15,6 +15,7 @@ interface PieData {
 }
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+const MONTHS_ORDER = ['jan.', 'fev.', 'mar.', 'abr.', 'mai.', 'jun.', 'jul.', 'ago.', 'set.', 'out.', 'nov.', 'dez.'];
 
 export function Dashboard() {
   const [salesData, setSalesData] = useState<SaleData[]>([]);
@@ -39,28 +40,30 @@ export function Dashboard() {
             salesDataMap[month] = { name: month, sales: 0 };
           }
           
-          salesDataMap[month].sales += Number(sale.amount); // Assuming amount represents sales
+          salesDataMap[month].sales += Number(sale.amount);
         });
-
+        
         const salesArray: SaleData[] = Object.values(salesDataMap);
-
         // Fetch product categories data
         const productsSnapshot = await getDocs(collection(db, 'products'));
         const productCategories: Record<string, number> = {};
 
         productsSnapshot.docs.forEach((doc) => {
           const product = doc.data();
-          const category = product.category as string; // Ensure category is treated as a string
-          if (!productCategories[category]) {
-            productCategories[category] = 0;
+          if (!productCategories[product.category]) {
+            productCategories[product.category] = 0;
           }
-          productCategories[category] += 1; // Count each product once for simplicity
+          productCategories[product.category] += 1;
         });
 
         const pieDataArray: PieData[] = Object.keys(productCategories).map(key => ({
           name: key,
           value: productCategories[key],
         }));
+        
+        salesArray.sort((a, b) => {
+          return MONTHS_ORDER.indexOf(a.name) - MONTHS_ORDER.indexOf(b.name);
+        });
 
         setSalesData(salesArray);
         setPieData(pieDataArray);
