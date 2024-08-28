@@ -18,18 +18,18 @@ interface Purchase {
   productName: string;
   date: Date;
   amount: number;
-  price: number; // Add price here
+  price: number;
 }
 
 interface Product {
   name: string;
-  price: string; // Keep price as string in Product interface
+  price: string;
 }
 
 export default function Purchases() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
-  const [totalSpent, setTotalSpent] = useState(0); // State for total spent
+  const [totalSpent, setTotalSpent] = useState(0);
   const router = useRouter(); 
 
   useEffect(() => {
@@ -43,7 +43,7 @@ export default function Purchases() {
       const q = query(collection(db, "sales"), where("customerId", "==", customerId));
       const purchasesSnapshot = await getDocs(q);
       const purchasesData: Purchase[] = [];
-      let total = 0; // Variable to accumulate total spent
+      let total = 0; 
 
       for (const docSnap of purchasesSnapshot.docs) {
         const purchaseData = docSnap.data();
@@ -52,24 +52,24 @@ export default function Purchases() {
 
         if (productSnap.exists()) {
           const productData = productSnap.data() as Product;
-          const price = parseFloat(productData.price); // Convert price from string to number
+          const price = parseFloat(productData.price);
           const amount = purchaseData.amount;
-          const purchaseTotal = amount * price; // Calculate total for this purchase
+          const purchaseTotal = amount * price;
 
           purchasesData.push({
             id: docSnap.id,
             productName: productData.name,
-            date: (purchaseData.date as any).toDate(), // Convert Timestamp to Date
+            date: (purchaseData.date as any).toDate(), 
             amount,
             price,
           });
 
-          total += purchaseTotal; // Add to total spent
+          total += purchaseTotal; 
         }
       }
 
       setPurchases(purchasesData);
-      setTotalSpent(total); // Set the total spent
+      setTotalSpent(total); 
       setLoading(false);
     };
 
@@ -97,7 +97,7 @@ export default function Purchases() {
             <p className="text-lg mb-4">Total gasto: R$ {totalSpent.toFixed(2)}</p>
             <ul>
               {purchases.map((purchase) => {
-                const total = purchase.amount * purchase.price; // Calculate total
+                const total = purchase.amount * purchase.price;
                 return (
                   <li
                     key={purchase.id}

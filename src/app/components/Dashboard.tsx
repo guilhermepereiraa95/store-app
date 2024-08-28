@@ -2,7 +2,7 @@
 import React, { useEffect, useState } from 'react';
 import { LineChart, Line, BarChart, Bar, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { collection, getDocs } from 'firebase/firestore';
-import { db } from '../lib/firebase'; // Adjust the import based on your file structure
+import { db } from '../lib/firebase';
 
 interface SaleData {
   name: string;
@@ -27,7 +27,6 @@ export function Dashboard() {
       try {
         setLoading(true);
         
-        // Fetch sales data
         const salesSnapshot = await getDocs(collection(db, 'sales'));
         const salesDataMap: Record<string, SaleData> = {};
 
@@ -44,7 +43,6 @@ export function Dashboard() {
         });
         
         const salesArray: SaleData[] = Object.values(salesDataMap);
-        // Fetch product categories data
         const productsSnapshot = await getDocs(collection(db, 'products'));
         const productCategories: Record<string, number> = {};
 

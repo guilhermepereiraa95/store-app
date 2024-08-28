@@ -20,13 +20,13 @@ interface Venda {
   productId: string;
   amount: number;
   date: Timestamp;
-  customerId: string; // Added to include the customer ID in the sale
+  customerId: string; 
 }
 
 interface Produto {
   id: string;
   name: any;
-  price: number; // Added price to calculate the total amount
+  price: number; 
 }
 
 interface Customer {
@@ -40,13 +40,13 @@ interface VendaFormInputs {
   productId: string;
   amount: number;
   date: string;
-  customerId: string; // Added for selecting the customer
+  customerId: string; 
 }
 
 export default function Vendas() {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]); // Added state for customers
+  const [customers, setCustomers] = useState<Customer[]>([]); 
   const [selectedVenda, setSelectedVenda] = useState<Venda | null>(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -95,7 +95,7 @@ export default function Vendas() {
 
     fetchVendas();
     fetchProdutos();
-    fetchCustomers(); // Fetch customers data
+    fetchCustomers();
   }, []);
 
   const addVenda: SubmitHandler<VendaFormInputs> = async (data) => {
@@ -145,8 +145,8 @@ export default function Vendas() {
     setValue("productId", venda.productId);
     setValue("amount", venda.amount);
     setValue("date", venda.date.toDate().toISOString().split("T")[0]);
-    setValue("customerId", venda.customerId); // Set the customer ID when editing
-    setIsModalOpen(true); // Open the modal when editing a sale
+    setValue("customerId", venda.customerId);
+    setIsModalOpen(true); 
   };
 
   const cancelUpdate = () => {
@@ -190,7 +190,6 @@ export default function Vendas() {
     return date.toLocaleDateString();
   };
 
-  // Calculate total amount spent for each sale
   const calculateTotalAmount = (productId: string, amount: number) => {
     const price = getProdutoPreco(productId);
     return (price * amount).toFixed(2);
@@ -206,7 +205,7 @@ export default function Vendas() {
             setIsModalOpen(true);
             setSelectedVenda(null);
             reset({
-              date: new Date().toISOString().split("T")[0], // Set default date to today
+              date: new Date().toISOString().split("T")[0],
             });
           }}
           className="bg-green-500 text-white p-2 mb-6"

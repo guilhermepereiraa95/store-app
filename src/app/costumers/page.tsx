@@ -13,7 +13,7 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "react-toastify";
 import { LayoutWrapper } from "../components/LayoutWrapper";
 import { ArrowPathIcon } from '@heroicons/react/24/outline';
-import { useRouter } from "next/navigation"; // Use this for client-side navigation
+import { useRouter } from "next/navigation";
 
 interface Customer {
   id: string;
@@ -36,7 +36,7 @@ export default function Customers() {
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
   const [loading, setLoading] = useState({ addUpdate: false, delete: "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const router = useRouter(); // Ensure this is inside a client-side component
+  const router = useRouter();
 
   const {
     register,
