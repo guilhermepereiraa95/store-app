@@ -25,7 +25,7 @@ interface Venda {
 
 interface Produto {
   id: string;
-  name: any;
+  name: string;
   price: number; 
 }
 
@@ -46,10 +46,11 @@ interface VendaFormInputs {
 export default function Vendas() {
   const [vendas, setVendas] = useState<Venda[]>([]);
   const [produtos, setProdutos] = useState<Produto[]>([]);
-  const [customers, setCustomers] = useState<Customer[]>([]); 
+  const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedVenda, setSelectedVenda] = useState<Venda | null>(null);
   const [loading, setLoading] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
 
   const {
     register,
@@ -195,11 +196,32 @@ export default function Vendas() {
     return (price * amount).toFixed(2);
   };
 
+  // Filter vendas based on search term
+  const filteredVendas = vendas.filter((venda) => {
+    const productName = getProdutoNome(venda.productId).toLowerCase();
+    const customerName = getCustomerNome(venda.customerId).toLowerCase();
+    return (
+      productName.includes(searchTerm.toLowerCase()) ||
+      customerName.includes(searchTerm.toLowerCase())
+    );
+  });
+
   return (
     <LayoutWrapper>
       <div className="p-6">
         <h1 className="text-2xl mb-4">Gerenciar Vendas</h1>
-        
+
+        {/* Search Filter */}
+        <div className="mb-6">
+          <input
+            type="text"
+            placeholder="Buscar Venda por Produto ou Cliente"
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border p-2 w-full"
+          />
+        </div>
+
         <button
           onClick={() => {
             setIsModalOpen(true);
@@ -217,7 +239,7 @@ export default function Vendas() {
           {loading ? (
             <ArrowPathIcon className="h-8 w-8 animate-spin mx-auto" />
           ) : (
-            vendas.map((venda) => (
+            filteredVendas.map((venda) => (
               <li
                 key={venda.id}
                 className="border p-4 mb-2 flex justify-between items-center"
@@ -262,7 +284,7 @@ export default function Vendas() {
                       errors.productId ? "border-red-500" : ""
                     }`}
                   >
-                    <option value="">Selecione o Produto</option>
+                    <option value="">Selecione um Produto</option>
                     {produtos.map((produto) => (
                       <option key={produto.id} value={produto.id}>
                         {produto.name}
@@ -270,54 +292,22 @@ export default function Vendas() {
                     ))}
                   </select>
                   {errors.productId && (
-                    <p className="text-red-500 mt-1">
-                      {errors.productId.message}
-                    </p>
+                    <span className="text-red-500">{errors.productId.message}</span>
                   )}
                 </div>
-
-                <div className="mb-4">
-                  <label className="block mb-2">Cliente</label>
-                  <select
-                    {...register("customerId", { required: "Cliente é obrigatório" })}
-                    className={`border p-2 w-full ${
-                      errors.customerId ? "border-red-500" : ""
-                    }`}
-                  >
-                    <option value="">Selecione o Cliente</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.customerId && (
-                    <p className="text-red-500 mt-1">
-                      {errors.customerId.message}
-                    </p>
-                  )}
-                </div>
-
                 <div className="mb-4">
                   <label className="block mb-2">Quantidade</label>
                   <input
                     type="number"
-                    placeholder="Quantidade"
-                    {...register("amount", {
-                      required: "Quantidade é obrigatória",
-                      min: { value: 1, message: "Quantidade deve ser maior que 0" },
-                    })}
+                    {...register("amount", { required: "Quantidade é obrigatória" })}
                     className={`border p-2 w-full ${
                       errors.amount ? "border-red-500" : ""
                     }`}
                   />
                   {errors.amount && (
-                    <p className="text-red-500 mt-1">
-                      {errors.amount.message}
-                    </p>
+                    <span className="text-red-500">{errors.amount.message}</span>
                   )}
                 </div>
-
                 <div className="mb-4">
                   <label className="block mb-2">Data</label>
                   <input
@@ -328,30 +318,42 @@ export default function Vendas() {
                     }`}
                   />
                   {errors.date && (
-                    <p className="text-red-500 mt-1">{errors.date.message}</p>
+                    <span className="text-red-500">{errors.date.message}</span>
                   )}
                 </div>
-
-                <div className="flex justify-between">
-                  <button
-                    type="submit"
-                    className="bg-blue-500 text-white p-2 w-32"
-                    disabled={loading}
+                <div className="mb-4">
+                  <label className="block mb-2">Cliente</label>
+                  <select
+                    {...register("customerId", { required: "Cliente é obrigatório" })}
+                    className={`border p-2 w-full ${
+                      errors.customerId ? "border-red-500" : ""
+                    }`}
                   >
-                    {loading ? (
-                      <ArrowPathIcon className="h-5 w-5 animate-spin mx-auto" />
-                    ) : selectedVenda ? (
-                      "Atualizar"
-                    ) : (
-                      "Adicionar"
-                    )}
-                  </button>
+                    <option value="">Selecione um Cliente</option>
+                    {customers.map((customer) => (
+                      <option key={customer.id} value={customer.id}>
+                        {customer.name}
+                      </option>
+                    ))}
+                  </select>
+                  {errors.customerId && (
+                    <span className="text-red-500">{errors.customerId.message}</span>
+                  )}
+                </div>
+                <div className="flex justify-end space-x-2">
                   <button
                     type="button"
                     onClick={cancelUpdate}
-                    className="bg-gray-500 text-white p-2 w-32"
+                    className="bg-gray-500 text-white p-2"
                   >
                     Cancelar
+                  </button>
+                  <button
+                    type="submit"
+                    className="bg-blue-500 text-white p-2"
+                    disabled={loading}
+                  >
+                    {loading ? "Salvando..." : "Salvar"}
                   </button>
                 </div>
               </form>

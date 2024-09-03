@@ -26,16 +26,32 @@ interface Product {
   price: string;
 }
 
+interface Customer {
+  name: string;
+}
+
 export default function Purchases() {
   const [purchases, setPurchases] = useState<Purchase[]>([]);
   const [loading, setLoading] = useState(true);
   const [totalSpent, setTotalSpent] = useState(0);
+  const [customerName, setCustomerName] = useState<string>('');
   const router = useRouter(); 
 
   useEffect(() => {
     const fetchPurchases = async () => {
       const customerId = new URLSearchParams(window.location.search).get("customerId");
       if (!customerId) {
+        router.push("/customers");
+        return;
+      }
+
+      // Fetch customer data
+      const customerRef = doc(db, "customers", customerId);
+      const customerSnap = await getDoc(customerRef);
+      if (customerSnap.exists()) {
+        const customerData = customerSnap.data() as Customer;
+        setCustomerName(customerData.name);
+      } else {
         router.push("/customers");
         return;
       }
@@ -89,7 +105,7 @@ export default function Purchases() {
   return (
     <LayoutWrapper>
       <div className="p-6">
-        <h1 className="text-2xl mb-4">Compras do Cliente</h1>
+        <h1 className="text-2xl mb-4">Compras de {customerName}</h1>
         {purchases.length === 0 ? (
           <p>Nenhuma compra encontrada para este cliente.</p>
         ) : (
