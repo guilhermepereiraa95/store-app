@@ -105,6 +105,12 @@ export default function Purchases() {
   return (
     <LayoutWrapper>
       <div className="p-6">
+        <button
+          onClick={() => router.back()}
+          className="bg-blue-500 text-white p-2 mb-6"
+        >
+          Voltar
+        </button>
         <h1 className="text-2xl mb-4">Compras de {customerName}</h1>
         {purchases.length === 0 ? (
           <p>Nenhuma compra encontrada para este cliente.</p>

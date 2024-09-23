@@ -1,66 +1,46 @@
-"use client";
+'use client';
 import { useState, useEffect } from "react";
-import {
-  collection,
-  getDocs,
-  addDoc,
-  updateDoc,
-  deleteDoc,
-  doc,
-} from "firebase/firestore";
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "react-toastify";
 import { LayoutWrapper } from "../components/LayoutWrapper";
-import { ArrowPathIcon } from "@heroicons/react/24/solid";
+import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import Modal from "../components/Modal";
 
-interface Produto {
+interface Product {
   id: string;
   name: string;
-  price: number;
-  amount: number;
+  price: string;
   brand: string;
   category: string;
 }
 
-interface ProdutoFormInputs {
+interface ProductFormInputs {
   name: string;
-  price: number;
-  amount: number;
+  price: string;
   brand: string;
   category: string;
 }
 
 export default function Products() {
-  const [products, setProducts] = useState<Produto[]>([]);
-  const [editingProductId, setEditingProductId] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
-  const [deletingProductId, setDeletingProductId] = useState<string | null>(null);
+  const [products, setProducts] = useState<Product[]>([]);
   const [searchTerm, setSearchTerm] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [loading, setLoading] = useState({ list: true, addUpdate: false, delete: "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<ProdutoFormInputs>();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<ProductFormInputs>();
 
   const fetchProducts = async () => {
+    setLoading({ ...loading, list: true });
     try {
-      setIsLoading(true);
-      const productsRef = collection(db, "products");
-      const productsSnapshot = await getDocs(productsRef);
-      const productsList = productsSnapshot.docs.map((doc) => ({
-        ...doc.data(),
-        id: doc.id,
-      })) as Produto[];
-      setProducts(productsList);
-      setIsLoading(false);
+      const productsSnapshot = await getDocs(collection(db, "products"));
+      setProducts(productsSnapshot.docs.map((doc) => ({ ...doc.data(), id: doc.id })) as Product[]);
     } catch (error) {
-      toast.error("Erro ao buscar produtos:");
-      setIsLoading(false);
+      toast.error("Erro ao buscar produtos");
+    } finally {
+      setLoading({ ...loading, list: false });
     }
   };
 
@@ -68,77 +48,83 @@ export default function Products() {
     fetchProducts();
   }, []);
 
-  const addProduto: SubmitHandler<ProdutoFormInputs> = async (data) => {
+  const addProduct: SubmitHandler<ProductFormInputs> = async (data) => {
+    setLoading({ ...loading, addUpdate: true });
     try {
-      setIsLoading(true);
-      if (editingProductId) {
-        const produtoRef = doc(db, "products", editingProductId);
-        await updateDoc(produtoRef, data as Record<string, any>);
+      if (selectedProduct) {
+        const productRef = doc(db, "products", selectedProduct.id);
+        await updateDoc(productRef, data as Record<string, any>);
         toast.success("Produto atualizado com sucesso!");
-        setEditingProductId(null);
+        setSelectedProduct(null);
       } else {
         await addDoc(collection(db, "products"), data as Record<string, any>);
         toast.success("Produto adicionado com sucesso!");
       }
-      reset();
+
       fetchProducts();
+      reset();
       setIsModalOpen(false);
     } catch (error) {
-      toast.error("Erro ao salvar produto:");
+      toast.error("Erro ao salvar produto");
     } finally {
-      setIsLoading(false);
+      setLoading({ ...loading, addUpdate: false });
     }
   };
 
-  const deleteProduto = async (id: string) => {
-    try {
-      setDeletingProductId(id);
-      const produtoRef = doc(db, "products", id);
-      await deleteDoc(produtoRef);
-      toast.success("Produto excluído com sucesso!");
-      fetchProducts();
-    } catch (error) {
-      toast.error("Erro ao excluir produto:");
-    } finally {
-      setDeletingProductId(null);
-    }
-  };
-
-  const editProduto = (produto: Produto) => {
-    setEditingProductId(produto.id);
-    setValue("name", produto.name);
-    setValue("price", produto.price);
-    setValue("amount", produto.amount);
-    setValue("brand", produto.brand);
-    setValue("category", produto.category);
+  const startUpdateProduct = (product: Product) => {
+    setSelectedProduct(product);
+    setValue("name", product.name);
+    setValue("price", product.price);
+    setValue("brand", product.brand);
+    setValue("category", product.category);
     setIsModalOpen(true);
   };
 
-  const filteredProducts = products.filter((produto) =>
-    produto.name.toLowerCase().includes(searchTerm.toLowerCase())
+  const cancelUpdate = () => {
+    setSelectedProduct(null);
+    reset();
+    setIsModalOpen(false);
+  };
+
+  const deleteProduct = async (id: string) => {
+    setLoading({ ...loading, delete: id });
+    try {
+      const productRef = doc(db, "products", id);
+      await deleteDoc(productRef);
+      toast.success("Produto excluído com sucesso!");
+      fetchProducts();
+    } catch (error) {
+      toast.error("Erro ao excluir produto");
+    } finally {
+      setLoading({ ...loading, delete: "" });
+    }
+  };
+
+  const filteredProducts = products.filter((product) =>
+    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.brand.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    product.category.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   return (
     <LayoutWrapper>
       <div className="p-6">
-        <h1 className="text-2xl mb-4">Gerenciar produtos</h1>
+        <h1 className="text-2xl mb-4">Gerenciar Produtos</h1>
 
-        {/* Search Filter */}
         <div className="mb-6">
           <input
             type="text"
-            placeholder="Buscar Produto por Nome"
+            placeholder="Buscar Produto por Nome, Preço, Marca ou Categoria"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             className="border p-2 w-full"
           />
         </div>
 
-        {/* Button to open modal for adding a new product */}
         <button
           onClick={() => {
             setIsModalOpen(true);
-            setEditingProductId(null);
+            setSelectedProduct(null);
             reset();
           }}
           className="bg-green-500 text-white p-2 mb-6"
@@ -146,180 +132,141 @@ export default function Products() {
           Adicionar Produto
         </button>
 
-        {/* List of products */}
-        <ul>
-          {filteredProducts.map((produto) => (
-            <li
-              key={produto.id}
-              className="border p-4 mb-2 flex justify-between items-center"
-            >
-              <span>
-                {produto.name} - Marca: {produto.brand} - Categoria: {produto.category} - R${produto.price.toFixed(2)} - Quantidade: {produto.amount}
-              </span>
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => editProduto(produto)}
-                  className="bg-yellow-500 text-white p-2 flex items-center justify-center"
-                >
-                  {isLoading && editingProductId === produto.id ? (
-                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                  ) : (
-                    "Editar"
-                  )}
-                </button>
-                <button
-                  onClick={() => deleteProduto(produto.id)}
-                  className="bg-red-500 text-white p-2 flex items-center justify-center"
-                >
-                  {deletingProductId === produto.id ? (
-                    <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                  ) : (
-                    "Excluir"
-                  )}
-                </button>
-              </div>
-            </li>
-          ))}
-        </ul>
-
-        {/* Modal for Add/Edit Product */}
-        {isModalOpen && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-6 rounded shadow-lg w-96">
-              <h2 className="text-xl mb-4">
-                {editingProductId ? "Editar Produto" : "Adicionar Produto"}
-              </h2>
-              <form onSubmit={handleSubmit(addProduto)}>
-                <div className="mb-4">
-                  <label className="block mb-2">Nome do Produto</label>
-                  <input
-                    type="text"
-                    placeholder="Nome do Produto"
-                    {...register("name", {
-                      required: "Nome do produto é obrigatório",
-                      minLength: {
-                        value: 2,
-                        message: "Nome deve ter no mínimo 2 caracteres",
-                      },
-                    })}
-                    className={`border p-2 w-full ${
-                      errors.name ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.name && (
-                    <p className="text-red-500 mt-1">{errors.name.message}</p>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <label className="block mb-2">Preço</label>
-                  <input
-                    type="number"
-                    placeholder="Preço"
-                    {...register("price", {
-                      required: "Preço do produto é obrigatório",
-                      valueAsNumber: true,
-                      min: { value: 0.01, message: "Preço deve ser maior que zero" },
-                    })}
-                    className={`border p-2 w-full ${
-                      errors.price ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.price && (
-                    <p className="text-red-500 mt-1">{errors.price.message}</p>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <label className="block mb-2">Quantidade</label>
-                  <input
-                    type="number"
-                    placeholder="Quantidade"
-                    {...register("amount", {
-                      required: "Quantidade é obrigatória",
-                      valueAsNumber: true,
-                      min: {
-                        value: 1,
-                        message: "Quantidade deve ser maior que zero",
-                      },
-                    })}
-                    className={`border p-2 w-full ${
-                      errors.amount ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.amount && (
-                    <p className="text-red-500 mt-1">{errors.amount.message}</p>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <label className="block mb-2">Marca</label>
-                  <input
-                    type="text"
-                    placeholder="Marca do Produto"
-                    {...register("brand", {
-                      required: "Marca do produto é obrigatória",
-                      minLength: {
-                        value: 2,
-                        message: "Marca deve ter no mínimo 2 caracteres",
-                      },
-                    })}
-                    className={`border p-2 w-full ${
-                      errors.brand ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.brand && (
-                    <p className="text-red-500 mt-1">{errors.brand.message}</p>
-                  )}
-                </div>
-
-                <div className="mb-4">
-                  <label className="block mb-2">Categoria</label>
-                  <input
-                    type="text"
-                    placeholder="Categoria do Produto"
-                    {...register("category", {
-                      required: "Categoria do produto é obrigatória",
-                      minLength: {
-                        value: 2,
-                        message: "Categoria deve ter no mínimo 2 caracteres",
-                      },
-                    })}
-                    className={`border p-2 w-full ${
-                      errors.category ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.category && (
-                    <p className="text-red-500 mt-1">{errors.category.message}</p>
-                  )}
-                </div>
-
-                <div className="flex justify-end">
+        {loading.list ? (
+          <div className="flex justify-center">
+            <ArrowPathIcon className="h-10 w-10 animate-spin text-gray-500" />
+          </div>
+        ) : (
+          <ul>
+            {filteredProducts.map((product) => (
+              <li key={product.id} className="border p-4 mb-2 flex justify-between items-center">
+                <span>
+                  {product.name} - Preço: {product.price} - Marca: {product.brand} - Categoria: {product.category}
+                </span>
+                <div className="flex items-center">
                   <button
-                    type="button"
-                    onClick={() => setIsModalOpen(false)}
-                    className="mr-4 bg-gray-500 text-white p-2"
+                    onClick={() => startUpdateProduct(product)}
+                    disabled={loading.addUpdate || loading.delete === product.id}
+                    className="bg-yellow-500 text-white p-2 mr-2"
                   >
-                    Cancelar
+                    {loading.addUpdate && selectedProduct?.id === product.id ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                      "Editar"
+                    )}
                   </button>
                   <button
-                    type="submit"
-                    className="bg-blue-500 text-white p-2"
-                    disabled={isLoading}
+                    onClick={() => deleteProduct(product.id)}
+                    disabled={loading.delete === product.id}
+                    className="bg-red-500 text-white p-2 mr-2"
                   >
-                    {isLoading ? (
+                    {loading.delete === product.id ? (
                       <ArrowPathIcon className="h-5 w-5 animate-spin" />
-                    ) : editingProductId ? (
-                      "Salvar"
                     ) : (
-                      "Adicionar"
+                      "Excluir"
                     )}
                   </button>
                 </div>
-              </form>
-            </div>
-          </div>
+              </li>
+            ))}
+          </ul>
         )}
+
+        {/* Modal Usage */}
+        <Modal
+          isOpen={isModalOpen}
+          onClose={cancelUpdate}
+          title={selectedProduct ? "Editar Produto" : "Adicionar Produto"}
+        >
+          <form onSubmit={handleSubmit(addProduct)}>
+            <div className="mb-4">
+              <label className="block mb-2">Nome do Produto</label>
+              <input
+                type="text"
+                placeholder="Nome do Produto"
+                {...register("name", {
+                  required: "Nome do produto é obrigatório",
+                  minLength: {
+                    value: 2,
+                    message: "Nome deve ter no mínimo 2 caracteres",
+                  },
+                })}
+                className={`border p-2 w-full ${errors.name ? "border-red-500" : ""}`}
+              />
+              {errors.name && <p className="text-red-500 mt-1">{errors.name.message}</p>}
+            </div>
+
+            <div className="mb-4">
+              <label className="block mb-2">Preço</label>
+              <input
+                type="text"
+                placeholder="Preço do Produto"
+                {...register("price", {
+                  required: "Preço do produto é obrigatório",
+                  pattern: {
+                    value: /^[\d.,]+$/,
+                    message: "Formato de preço inválido",
+                  },
+                })}
+                className={`border p-2 w-full ${errors.price ? "border-red-500" : ""}`}
+              />
+              {errors.price && <p className="text-red-500 mt-1">{errors.price.message}</p>}
+            </div>
+
+            <div className="mb-4">
+              <label className="block mb-2">Marca</label>
+              <input
+                type="text"
+                placeholder="Marca do Produto"
+                {...register("brand", {
+                  required: "Marca do produto é obrigatória",
+                  minLength: {
+                    value: 2,
+                    message: "Marca deve ter no mínimo 2 caracteres",
+                  },
+                })}
+                className={`border p-2 w-full ${errors.brand ? "border-red-500" : ""}`}
+              />
+              {errors.brand && <p className="text-red-500 mt-1">{errors.brand.message}</p>}
+            </div>
+
+            <div className="mb-4">
+              <label className="block mb-2">Categoria</label>
+              <input
+                type="text"
+                placeholder="Categoria do Produto"
+                {...register("category", {
+                  required: "Categoria do produto é obrigatória",
+                  minLength: {
+                    value: 2,
+                    message: "Categoria deve ter no mínimo 2 caracteres",
+                  },
+                })}
+                className={`border p-2 w-full ${errors.category ? "border-red-500" : ""}`}
+              />
+              {errors.category && <p className="text-red-500 mt-1">{errors.category.message}</p>}
+            </div>
+
+            <div className="flex justify-end">
+              <button
+                type="button"
+                onClick={cancelUpdate}
+                className="bg-gray-500 text-white p-2 mr-4"
+              >
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading.addUpdate}
+                className="bg-green-500 text-white p-2"
+              >
+                {loading.addUpdate ? (
+                  <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                ) : selectedProduct ? "Atualizar" : "Adicionar"}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </LayoutWrapper>
   );

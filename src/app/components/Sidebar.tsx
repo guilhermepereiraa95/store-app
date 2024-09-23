@@ -57,7 +57,7 @@ export function Sidebar({ isOpen, toggleSidebar }: SidebarProps) {
         </li>
         <li>
           <button
-            onClick={() => router.push("/costumers")}
+            onClick={() => router.push("/customers")}
             className="bg-orange-500 text-white px-4 py-2 rounded w-full text-left flex items-center"
           >
             <UsersIcon className="h-5 w-5 mr-2" aria-hidden="true" />

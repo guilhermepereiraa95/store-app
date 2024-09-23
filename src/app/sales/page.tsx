@@ -14,19 +14,20 @@ import { useForm, SubmitHandler } from "react-hook-form";
 import { toast } from "react-toastify";
 import { LayoutWrapper } from "../components/LayoutWrapper";
 import { ArrowPathIcon } from "@heroicons/react/24/outline";
+import Modal from "../components/Modal";
 
 interface Venda {
   id: string;
   productId: string;
   amount: number;
   date: Timestamp;
-  customerId: string; 
+  customerId: string;
 }
 
 interface Produto {
   id: string;
   name: string;
-  price: number; 
+  price: number;
 }
 
 interface Customer {
@@ -40,7 +41,7 @@ interface VendaFormInputs {
   productId: string;
   amount: number;
   date: string;
-  customerId: string; 
+  customerId: string;
 }
 
 export default function Vendas() {
@@ -48,21 +49,15 @@ export default function Vendas() {
   const [produtos, setProdutos] = useState<Produto[]>([]);
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [selectedVenda, setSelectedVenda] = useState<Venda | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState({ list: false, addUpdate: false, delete: "" });
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    formState: { errors },
-  } = useForm<VendaFormInputs>();
+  const { register, handleSubmit, reset, setValue, formState: { errors } } = useForm<VendaFormInputs>();
 
-  useEffect(() => {
-    const fetchVendas = async () => {
-      setLoading(true);
+  const fetchVendas = async () => {
+    setLoading(prev => ({ ...prev, list: true }));
+    try {
       const vendasSnapshot = await getDocs(collection(db, "sales"));
       setVendas(
         vendasSnapshot.docs.map((doc) => ({
@@ -71,10 +66,15 @@ export default function Vendas() {
           date: doc.data().date as Timestamp,
         })) as Venda[]
       );
-      setLoading(false);
-    };
+    } catch (error) {
+      toast.error("Erro ao buscar vendas");
+    } finally {
+      setLoading(prev => ({ ...prev, list: false }));
+    }
+  };
 
-    const fetchProdutos = async () => {
+  const fetchProdutos = async () => {
+    try {
       const produtosSnapshot = await getDocs(collection(db, "products"));
       setProdutos(
         produtosSnapshot.docs.map((doc) => ({
@@ -82,9 +82,13 @@ export default function Vendas() {
           id: doc.id,
         })) as Produto[]
       );
-    };
+    } catch (error) {
+      toast.error("Erro ao buscar produtos");
+    }
+  };
 
-    const fetchCustomers = async () => {
+  const fetchCustomers = async () => {
+    try {
       const customersSnapshot = await getDocs(collection(db, "customers"));
       setCustomers(
         customersSnapshot.docs.map((doc) => ({
@@ -92,41 +96,41 @@ export default function Vendas() {
           id: doc.id,
         })) as Customer[]
       );
-    };
+    } catch (error) {
+      toast.error("Erro ao buscar clientes");
+    }
+  };
 
+  useEffect(() => {
     fetchVendas();
     fetchProdutos();
     fetchCustomers();
   }, []);
 
   const addVenda: SubmitHandler<VendaFormInputs> = async (data) => {
+    setLoading(prev => ({ ...prev, addUpdate: true }));
     try {
       const vendaData = {
         ...data,
         date: Timestamp.fromDate(new Date(data.date)),
       };
 
-      setLoading(true);
-
       if (selectedVenda) {
         const vendaRef = doc(db, "sales", selectedVenda.id);
         await updateDoc(vendaRef, vendaData);
         toast.success("Venda atualizada com sucesso!");
-
-        setVendas((prevVendas) =>
-          prevVendas.map((venda) =>
+        setVendas(prevVendas =>
+          prevVendas.map(venda =>
             venda.id === selectedVenda.id
               ? { ...venda, ...vendaData, date: vendaData.date }
               : venda
           )
         );
-
         setSelectedVenda(null);
       } else {
         const vendaRef = await addDoc(collection(db, "sales"), vendaData);
         toast.success("Venda adicionada com sucesso!");
-
-        setVendas((prevVendas) => [
+        setVendas(prevVendas => [
           ...prevVendas,
           { id: vendaRef.id, ...vendaData },
         ]);
@@ -137,7 +141,7 @@ export default function Vendas() {
     } catch (error) {
       toast.error("Erro ao salvar venda");
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, addUpdate: false }));
     }
   };
 
@@ -147,7 +151,7 @@ export default function Vendas() {
     setValue("amount", venda.amount);
     setValue("date", venda.date.toDate().toISOString().split("T")[0]);
     setValue("customerId", venda.customerId);
-    setIsModalOpen(true); 
+    setIsModalOpen(true);
   };
 
   const cancelUpdate = () => {
@@ -157,38 +161,36 @@ export default function Vendas() {
   };
 
   const deleteVenda = async (id: string) => {
+    setLoading(prev => ({ ...prev, delete: id }));
     try {
-      setLoading(true);
       const vendaRef = doc(db, "sales", id);
       await deleteDoc(vendaRef);
       toast.success("Venda excluída com sucesso!");
-
-      setVendas((prevVendas) => prevVendas.filter((venda) => venda.id !== id));
+      setVendas(prevVendas => prevVendas.filter(venda => venda.id !== id));
     } catch (error) {
       toast.error("Erro ao excluir venda");
     } finally {
-      setLoading(false);
+      setLoading(prev => ({ ...prev, delete: "" }));
     }
   };
 
   const getProdutoNome = (productId: string) => {
-    const produto = produtos.find((p) => p.id === productId);
+    const produto = produtos.find(p => p.id === productId);
     return produto ? produto.name : "Produto desconhecido";
   };
 
   const getProdutoPreco = (productId: string) => {
-    const produto = produtos.find((p) => p.id === productId);
+    const produto = produtos.find(p => p.id === productId);
     return produto ? produto.price : 0;
   };
 
   const getCustomerNome = (customerId: string) => {
-    const customer = customers.find((c) => c.id === customerId);
+    const customer = customers.find(c => c.id === customerId);
     return customer ? customer.name : "Cliente desconhecido";
   };
 
   const formatDate = (timestamp: Timestamp) => {
-    const date = timestamp.toDate();
-    return date.toLocaleDateString();
+    return timestamp.toDate().toLocaleDateString();
   };
 
   const calculateTotalAmount = (productId: string, amount: number) => {
@@ -196,8 +198,7 @@ export default function Vendas() {
     return (price * amount).toFixed(2);
   };
 
-  // Filter vendas based on search term
-  const filteredVendas = vendas.filter((venda) => {
+  const filteredVendas = vendas.filter(venda => {
     const productName = getProdutoNome(venda.productId).toLowerCase();
     const customerName = getCustomerNome(venda.customerId).toLowerCase();
     return (
@@ -211,13 +212,12 @@ export default function Vendas() {
       <div className="p-6">
         <h1 className="text-2xl mb-4">Gerenciar Vendas</h1>
 
-        {/* Search Filter */}
         <div className="mb-6">
           <input
             type="text"
             placeholder="Buscar Venda por Produto ou Cliente"
             value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            onChange={e => setSearchTerm(e.target.value)}
             className="border p-2 w-full"
           />
         </div>
@@ -226,9 +226,7 @@ export default function Vendas() {
           onClick={() => {
             setIsModalOpen(true);
             setSelectedVenda(null);
-            reset({
-              date: new Date().toISOString().split("T")[0],
-            });
+            reset({ date: new Date().toISOString().split("T")[0] });
           }}
           className="bg-green-500 text-white p-2 mb-6"
         >
@@ -236,31 +234,38 @@ export default function Vendas() {
         </button>
 
         <ul>
-          {loading ? (
-            <ArrowPathIcon className="h-8 w-8 animate-spin mx-auto" />
+          {loading.list ? (
+            <div className="flex justify-center">
+              <ArrowPathIcon className="h-8 w-8 animate-spin text-gray-500" />
+            </div>
           ) : (
-            filteredVendas.map((venda) => (
-              <li
-                key={venda.id}
-                className="border p-4 mb-2 flex justify-between items-center"
-              >
+            filteredVendas.map(venda => (
+              <li key={venda.id} className="border p-4 mb-2 flex justify-between items-center">
                 <span>
-                  {getProdutoNome(venda.productId)} - Quantidade: {venda.amount}{" "}
-                  - Data: {formatDate(venda.date)} - Cliente: {getCustomerNome(venda.customerId)}{" "}
-                  - Total: R${calculateTotalAmount(venda.productId, venda.amount)}
+                  {getProdutoNome(venda.productId)} - Quantidade: {venda.amount} - Data: {formatDate(venda.date)} - Cliente: {getCustomerNome(venda.customerId)} - Total: R$ {calculateTotalAmount(venda.productId, venda.amount)}
                 </span>
                 <div className="flex items-center space-x-2">
                   <button
                     onClick={() => startUpdateVenda(venda)}
+                    disabled={loading.addUpdate}
                     className="bg-yellow-500 text-white p-2"
                   >
-                    Editar
+                    {loading.addUpdate && selectedVenda?.id === venda.id ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                      "Editar"
+                    )}
                   </button>
                   <button
                     onClick={() => deleteVenda(venda.id)}
+                    disabled={loading.delete === venda.id}
                     className="bg-red-500 text-white p-2"
                   >
-                    Excluir
+                    {loading.delete === venda.id ? (
+                      <ArrowPathIcon className="h-5 w-5 animate-spin" />
+                    ) : (
+                      "Excluir"
+                    )}
                   </button>
                 </div>
               </li>
@@ -268,98 +273,68 @@ export default function Vendas() {
           )}
         </ul>
 
-        {/* Modal for Add/Edit Sale */}
-        {isModalOpen && (
-          <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50">
-            <div className="bg-white p-6 rounded shadow-lg w-96">
-              <h2 className="text-xl mb-4">
-                {selectedVenda ? "Editar Venda" : "Registrar Venda"}
-              </h2>
-              <form onSubmit={handleSubmit(addVenda)}>
-                <div className="mb-4">
-                  <label className="block mb-2">Produto</label>
-                  <select
-                    {...register("productId", { required: "Produto é obrigatório" })}
-                    className={`border p-2 w-full ${
-                      errors.productId ? "border-red-500" : ""
-                    }`}
-                  >
-                    <option value="">Selecione um Produto</option>
-                    {produtos.map((produto) => (
-                      <option key={produto.id} value={produto.id}>
-                        {produto.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.productId && (
-                    <span className="text-red-500">{errors.productId.message}</span>
-                  )}
-                </div>
-                <div className="mb-4">
-                  <label className="block mb-2">Quantidade</label>
-                  <input
-                    type="number"
-                    {...register("amount", { required: "Quantidade é obrigatória" })}
-                    className={`border p-2 w-full ${
-                      errors.amount ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.amount && (
-                    <span className="text-red-500">{errors.amount.message}</span>
-                  )}
-                </div>
-                <div className="mb-4">
-                  <label className="block mb-2">Data</label>
-                  <input
-                    type="date"
-                    {...register("date", { required: "Data é obrigatória" })}
-                    className={`border p-2 w-full ${
-                      errors.date ? "border-red-500" : ""
-                    }`}
-                  />
-                  {errors.date && (
-                    <span className="text-red-500">{errors.date.message}</span>
-                  )}
-                </div>
-                <div className="mb-4">
-                  <label className="block mb-2">Cliente</label>
-                  <select
-                    {...register("customerId", { required: "Cliente é obrigatório" })}
-                    className={`border p-2 w-full ${
-                      errors.customerId ? "border-red-500" : ""
-                    }`}
-                  >
-                    <option value="">Selecione um Cliente</option>
-                    {customers.map((customer) => (
-                      <option key={customer.id} value={customer.id}>
-                        {customer.name}
-                      </option>
-                    ))}
-                  </select>
-                  {errors.customerId && (
-                    <span className="text-red-500">{errors.customerId.message}</span>
-                  )}
-                </div>
-                <div className="flex justify-end space-x-2">
-                  <button
-                    type="button"
-                    onClick={cancelUpdate}
-                    className="bg-gray-500 text-white p-2"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="submit"
-                    className="bg-blue-500 text-white p-2"
-                    disabled={loading}
-                  >
-                    {loading ? "Salvando..." : "Salvar"}
-                  </button>
-                </div>
-              </form>
+        <Modal
+          isOpen={isModalOpen}
+          onClose={cancelUpdate}
+          title={selectedVenda ? "Editar Venda" : "Adicionar Venda"}
+        >
+          <form onSubmit={handleSubmit(addVenda)}>
+            <div className="mb-4">
+              <label className="block">Produto</label>
+              <select {...register("productId", { required: true })} className="border p-2 w-full">
+                <option value="">Selecione um produto</option>
+                {produtos.map(produto => (
+                  <option key={produto.id} value={produto.id}>
+                    {produto.name}
+                  </option>
+                ))}
+              </select>
+              {errors.productId && <p className="text-red-500">Produto é obrigatório</p>}
             </div>
-          </div>
-        )}
+            <div className="mb-4">
+              <label className="block">Quantidade</label>
+              <input
+                type="number"
+                {...register("amount", { required: true })}
+                className="border p-2 w-full"
+              />
+              {errors.amount && <p className="text-red-500">Quantidade é obrigatória</p>}
+            </div>
+            <div className="mb-4">
+              <label className="block">Data</label>
+              <input
+                type="date"
+                {...register("date", { required: true })}
+                className="border p-2 w-full"
+              />
+              {errors.date && <p className="text-red-500">Data é obrigatória</p>}
+            </div>
+            <div className="mb-4">
+              <label className="block">Cliente</label>
+              <select {...register("customerId", { required: true })} className="border p-2 w-full">
+                <option value="">Selecione um cliente</option>
+                {customers.map(customer => (
+                  <option key={customer.id} value={customer.id}>
+                    {customer.name}
+                  </option>
+                ))}
+              </select>
+              {errors.customerId && <p className="text-red-500">Cliente é obrigatório</p>}
+            </div>
+            <div className="flex justify-end space-x-4">
+              <button type="button" onClick={cancelUpdate} className="bg-gray-500 text-white p-2">
+                Cancelar
+              </button>
+              <button
+                type="submit"
+                disabled={loading.addUpdate}
+                className="bg-blue-500 text-white p-2"
+              >
+                {loading.addUpdate ? <ArrowPathIcon className="h-5 w-5 animate-spin" /> : "Salvar"}
+              </button>
+            </div>
+          </form>
+        </Modal>
       </div>
     </LayoutWrapper>
   );
