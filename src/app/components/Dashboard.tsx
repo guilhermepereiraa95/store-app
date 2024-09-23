@@ -88,6 +88,13 @@ export function Dashboard() {
     fetchData();
   }, []);
 
+  const tooltipFormatter = (value: number, name: string) => {
+    if (name === 'Lucro') {
+      return `R$ ${value.toFixed(2)}`;
+    }
+    return value;
+  };
+
   if (loading) {
     return <div className="p-6">Loading...</div>;
   }
@@ -103,10 +110,10 @@ export function Dashboard() {
             <YAxis yAxisId="left" />
             <YAxis yAxisId="right" orientation="right" />
             <CartesianGrid strokeDasharray="3 3" />
-            <Tooltip />
+            <Tooltip  formatter={tooltipFormatter} />
             <Legend />
-            <Line yAxisId="left" type="monotone" dataKey="sales" stroke="#8884d8" />
-            <Line yAxisId="right" type="monotone" dataKey="profit" stroke="#82ca9d" />
+            <Line yAxisId="left" type="monotone" dataKey="sales" stroke="#8884d8" name="Vendas" />
+            <Line yAxisId="right" type="monotone" dataKey="profit" stroke="#82ca9d" name="Lucro" />
           </LineChart>
         </ResponsiveContainer>
       </div>
@@ -120,10 +127,10 @@ export function Dashboard() {
             <YAxis yAxisId="left" />
             <YAxis yAxisId="right" orientation="right" />
             <CartesianGrid strokeDasharray="3 3" />
-            <Tooltip />
+            <Tooltip formatter={tooltipFormatter} />
             <Legend />
-            <Bar yAxisId="left" dataKey="sales" fill="#8884d8" />
-            <Bar yAxisId="right" dataKey="profit" fill="#82ca9d" />
+            <Bar yAxisId="left" dataKey="sales" fill="#8884d8" name="Vendas" />
+            <Bar yAxisId="right" dataKey="profit" fill="#82ca9d" name="Lucro" />
           </BarChart>
         </ResponsiveContainer>
       </div>
